@@ -1,0 +1,25 @@
+{
+  "model": "WriteMirror Fixed Trajectory Autoencoder",
+  "version": 1,
+  "source": "KanjiVG",
+  "license": "CC BY-SA 3.0",
+  "samples": 11662,
+  "unique_characters": 6703,
+  "input_shape": [
+    1,
+    384
+  ],
+  "point_count": 128,
+  "features": [
+    "normalized_x",
+    "normalized_y",
+    "stroke_end"
+  ],
+  "purpose": "self-supervised trajectory reconstruction",
+  "not_for": [
+    "diagnosis",
+    "ability scoring",
+    "difficulty inference"
+  ],
+  "seed": 20260718
+}

@@ -75,6 +75,11 @@
                                TextWrapping="Wrap" Margin="0,4,0,0"
                                AutomationProperties.AutomationId="StatusText"
                                AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock x:Name="AiStatusText"
+                               Text="AIモデルを準備しています"
+                               TextWrapping="Wrap" Margin="0,4,0,0"
+                               AutomationProperties.Name="AIモデルの状態"
+                               AutomationProperties.LiveSetting="Polite" />
                 </StackPanel>
             </Border>
 
@@ -191,6 +196,28 @@
                                             Content="これで終わる"
                                             Click="FinishButton_Click" Margin="4,0,0,0" />
                                 </Grid>
+                                <Border x:Name="AiPreviewPanel" Visibility="Collapsed"
+                                        BorderBrush="#7A5AF8" BorderThickness="2" CornerRadius="8"
+                                        Background="#F7F4FF" Padding="10" Margin="0,10,0,2"
+                                        AutomationProperties.AutomationId="AiPreviewPanel"
+                                        AutomationProperties.Name="任意のAI軌跡再構成表示">
+                                    <StackPanel>
+                                        <TextBlock Text="AIによる軌跡の圧縮・再構成"
+                                                   FontWeight="SemiBold" FontSize="18" />
+                                        <TextBlock Text="正解見本や採点ではありません。灰色が入力、紫色がAI再構成です。"
+                                                   TextWrapping="Wrap" FontSize="13" Margin="0,2,0,4" />
+                                        <Border Background="White" BorderBrush="#D8DDE6" BorderThickness="1"
+                                                CornerRadius="4" HorizontalAlignment="Center">
+                                            <Canvas x:Name="AiPreviewCanvas" Width="320" Height="180"
+                                                    ClipToBounds="True"
+                                                    AutomationProperties.Name="入力軌跡とAI再構成の重ね合わせ" />
+                                        </Border>
+                                        <TextBlock Text="学習元はKanjiVGの漢字です。平仮名・片仮名の妥当性は未検証です。"
+                                                   TextWrapping="Wrap" FontSize="12" Margin="0,5,0,0" />
+                                        <TextBlock x:Name="AiPreviewMetricsText" TextWrapping="Wrap"
+                                                   FontSize="12" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </Border>
                                 <Expander Header="くわしい数値（見たい人だけ）" IsExpanded="False" Margin="0,8,0,0"
                                           AutomationProperties.Name="くわしい観測値">
                                     <StackPanel Margin="8">

@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Microsoft.Windows.AI.MachineLearning;
 using Windows.Foundation;
 using WriteMirror.Core.Analysis;
 using WriteMirror.Core.Comparison;
@@ -14,6 +15,7 @@ using WriteMirror.Core.Matching;
 using WriteMirror.Core.Models;
 using WriteMirror.Core.Replay;
 using WriteMirror.Core.Storage;
+using WriteMirror.Ai;
 using WriteMirror.Infrastructure.Storage;
 
 namespace WriteMirror.App;
@@ -30,9 +32,7 @@ public sealed partial class MainPage : Page
     private readonly IWritingAnalyzer _analyzer = new WritingAnalyzer();
     private readonly ISubjectiveMatcher _subjectiveMatcher = new SubjectiveMatcher();
     private readonly IAttemptComparer _attemptComparer;
-    private readonly IFeedbackGenerator _feedbackGenerator = new PhiSilicaFeedbackService(
-        new UnavailableLocalLanguageModel(),
-        new TemplateFeedbackService());
+    private readonly IFeedbackGenerator _feedbackGenerator = new TemplateFeedbackService();
     private readonly ISessionRepository _sessionRepository;
     private readonly SolidColorBrush _liveStrokeBrush = new(Colors.Black);
     private readonly SolidColorBrush _replayStrokeBrush = new(Colors.DodgerBlue);
@@ -52,6 +52,7 @@ public sealed partial class MainPage : Page
     private DateTimeOffset _sessionStartedAt = DateTimeOffset.Now;
     private CancellationTokenSource _sessionPersistenceCancellation = new();
     private string _activeInputName = "入力";
+    private TrajectoryAiService? _trajectoryAiService;
 
     public MainPage()
     {
@@ -61,7 +62,145 @@ public sealed partial class MainPage : Page
             "WriteMirror",
             "Sessions"));
         InitializeComponent();
+        Loaded += MainPage_Loaded;
     }
+
+    private async void MainPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= MainPage_Loaded;
+        await PrepareWindowsMlAsync();
+    }
+
+    private async Task PrepareWindowsMlAsync()
+    {
+        string logDirectory = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "WriteMirror");
+        string logPath = System.IO.Path.Combine(logDirectory, "windows-ml-readiness.log");
+
+        try
+        {
+            ExecutionProviderCatalog catalog = ExecutionProviderCatalog.GetDefault();
+            ExecutionProvider? qnn = catalog.FindAllProviders()
+                .FirstOrDefault(provider => provider.Name == "QNNExecutionProvider");
+            if (qnn is null)
+            {
+                string cpuModelPath = System.IO.Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Models",
+                    "trajectory-autoencoder-qdq-int8.onnx");
+                _trajectoryAiService = TrajectoryAiService.CreateCpu(cpuModelPath);
+                AiStatusText.Text = "AIモデル：CPUモード（Qualcomm NPU非搭載端末）";
+                WriteWindowsMlLog(logPath, "QNNExecutionProvider\tUnavailable");
+                return;
+            }
+
+            WriteWindowsMlLog(logPath, $"QNNExecutionProvider\t{qnn.ReadyState}");
+            if (qnn.ReadyState != ExecutionProviderReadyState.Ready)
+            {
+                StatusText.Text = "AI：Qualcomm NPU コンポーネントを準備しています…";
+                var operation = qnn.EnsureReadyAsync();
+                operation.Progress = (_, progress) => DispatcherQueue.TryEnqueue(() =>
+                {
+                    StatusText.Text = $"AI：Qualcomm NPU コンポーネントを準備しています（{progress:0}%）";
+                });
+
+                ExecutionProviderReadyResult result = await operation;
+                string extendedError = result.ExtendedError is null
+                    ? "none"
+                    : $"0x{result.ExtendedError.HResult:X8}";
+                WriteWindowsMlLog(
+                    logPath,
+                    $"EnsureReadyAsync\t{result.Status}\t{extendedError}\t{result.DiagnosticText}");
+                if (result.Status != ExecutionProviderReadyResultState.Success)
+                {
+                    throw new InvalidOperationException(
+                        $"QNN preparation failed: {result.Status} {result.DiagnosticText}");
+                }
+            }
+
+            await catalog.RegisterCertifiedAsync();
+            WriteWindowsMlLog(logPath, $"Registered\t{qnn.ReadyState}");
+            string modelPath = System.IO.Path.Combine(
+                AppContext.BaseDirectory,
+                "Models",
+                "trajectory-autoencoder-qdq-int8.onnx");
+            string devices = string.Join(
+                ", ",
+                Microsoft.ML.OnnxRuntime.OrtEnv.Instance().GetEpDevices()
+                    .Select(device => $"{device.EpName}/{device.HardwareDevice.Type}"));
+            WriteWindowsMlLog(logPath, $"OrtDevices\t{devices}");
+            WriteWindowsMlLog(logPath, "ModelSession\tCreating");
+            _trajectoryAiService = TrajectoryAiService.CreateNpu(modelPath);
+            WriteWindowsMlLog(logPath, $"ModelSession\t{_trajectoryAiService.ExecutionProvider}");
+            TrajectoryAiResult probe = await Task.Run(() =>
+                _trajectoryAiService.Analyze(CreateModelProbeStrokes()));
+            WriteWindowsMlLog(
+                logPath,
+                $"ProbeInference\t{probe.ExecutionProvider}\t{probe.InferenceMilliseconds:0.000}ms\t" +
+                $"difference={probe.ReconstructionDifference:0.000000}");
+            AiStatusText.Text =
+                $"AIモデル：KanjiVG軌跡オートエンコーダー／Qualcomm Hexagon NPU（QNN）／" +
+                $"確認推論 {probe.InferenceMilliseconds:0.0} ms";
+        }
+        catch (Exception error)
+        {
+            WriteWindowsMlLog(logPath, $"Error\t0x{error.HResult:X8}\t{error.GetType().Name}\t{error.Message}");
+            try
+            {
+                string modelPath = System.IO.Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Models",
+                    "trajectory-autoencoder-qdq-int8.onnx");
+                _trajectoryAiService = TrajectoryAiService.CreateCpu(modelPath);
+                AiStatusText.Text = "AIモデル：CPUモード（NPUは今回利用できません）";
+            }
+            catch (Exception fallbackError)
+            {
+                WriteWindowsMlLog(
+                    logPath,
+                    $"CpuFallbackError\t0x{fallbackError.HResult:X8}\t{fallbackError.Message}");
+                AiStatusText.Text = "AIモデルを利用できません。書字記録機能は引き続き使用できます";
+            }
+        }
+    }
+
+    private static void WriteWindowsMlLog(string path, string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+            File.AppendAllText(path, $"{DateTimeOffset.Now:O}\t{message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // ログ保存の失敗はアプリの書字機能を妨げないようにします。
+        }
+    }
+
+    private static IReadOnlyList<Stroke> CreateModelProbeStrokes() =>
+    [
+        new Stroke(0,
+        [
+            new PenPointSample(190, 150, 1_000_000, 0.5f, 0, 0, true),
+            new PenPointSample(480, 150, 1_420_000, 0.5f, 0, 0, true)
+        ]),
+        new Stroke(1,
+        [
+            new PenPointSample(335, 80, 1_680_000, 0.5f, 0, 0, true),
+            new PenPointSample(335, 360, 2_160_000, 0.5f, 0, 0, true)
+        ]),
+        new Stroke(2,
+        [
+            new PenPointSample(330, 205, 2_430_000, 0.5f, 0, 0, true),
+            new PenPointSample(215, 345, 2_820_000, 0.5f, 0, 0, true)
+        ]),
+        new Stroke(3,
+        [
+            new PenPointSample(340, 205, 3_520_000, 0.5f, 0, 0, true),
+            new PenPointSample(475, 350, 3_900_000, 0.5f, 0, 0, true)
+        ])
+    ];
 
     private void DrawingCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
@@ -494,6 +633,7 @@ public sealed partial class MainPage : Page
         InitialMetricsText.Text = FormatInitialMetrics(metrics);
         StatusText.Text = DescribeMatch(match);
         ShowFeedbackAsync(_currentAttempt!, match, null);
+        _ = AnalyzeTrajectoryAsync();
     }
 
     private void SecondAttemptButton_Click(object sender, RoutedEventArgs e)
@@ -523,7 +663,7 @@ public sealed partial class MainPage : Page
         StatusText.Text = "2回目を書いてください。1回目のデータは分けて保存されています";
     }
 
-    private void CompareButton_Click(object sender, RoutedEventArgs e)
+    private async void CompareButton_Click(object sender, RoutedEventArgs e)
     {
         if (_firstAttempt is null || _recorder.Strokes.Count == 0)
         {
@@ -572,6 +712,43 @@ public sealed partial class MainPage : Page
         _interactionMode = InteractionMode.Marked;
         StatusText.Text = "2回の書字比較が完了しました";
         ShowFeedbackAsync(_firstAttempt!, null, comparison);
+        await AnalyzeTrajectoryAsync();
+    }
+
+    private async Task AnalyzeTrajectoryAsync()
+    {
+        if (_trajectoryAiService is null || _recorder.Strokes.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            TrajectoryAiResult result = await Task.Run(() =>
+                _trajectoryAiService.Analyze(_recorder.Strokes));
+            AiStatusText.Text =
+                $"AIモデル：{result.ExecutionProvider}／推論 {result.InferenceMilliseconds:0.0} ms／" +
+                $"軌跡再構成差 {result.ReconstructionDifference:0.0000}（研究値・採点や診断には使用しません）";
+            string logPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WriteMirror",
+                "windows-ml-readiness.log");
+            WriteWindowsMlLog(
+                logPath,
+                $"Inference\t{result.ExecutionProvider}\t{result.InferenceMilliseconds:0.000}ms\t" +
+                $"difference={result.ReconstructionDifference:0.000000}");
+        }
+        catch (Exception error)
+        {
+            AiStatusText.Text = "AIモデル推論を完了できませんでした。書字記録機能は引き続き使用できます";
+            string logPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WriteMirror",
+                "windows-ml-readiness.log");
+            WriteWindowsMlLog(
+                logPath,
+                $"InferenceError\t0x{error.HResult:X8}\t{error.GetType().Name}\t{error.Message}");
+        }
     }
 
     private async void ShowFeedbackAsync(

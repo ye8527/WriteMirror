@@ -53,3 +53,21 @@ python -m venv .venv
 - SHA-256: `87E3D6EC6DA6E235CE4D0245B728707260AED2C1EA794C3A210F7224E3C4EF76`
 
 この結果は学習パイプラインが動作することを示すだけで、実利用時の精度を保証しません。評価には、同意を得た複数書き手の保留データを用い、個々の軌跡ではなく書き手単位で学習・検証・テストを分割する必要があります。
+
+## Qualcomm NPU向け固定長モデル（2026-07-19）
+
+QNN HTPの静的形状・量子化要件に合わせ、128点×3特徴量を入力する全結合オートエンコーダーを追加しました。構成は `384→128→32→128→384`、活性化はReLU、出力はSigmoidです。GRU版と同じくノイズ除去型の自己教師あり学習で、診断ラベルや困難度ラベルは使用しません。
+
+```powershell
+.venv\Scripts\python -m pip install onnx onnxruntime
+.venv\Scripts\python experiments\japanese_trajectory\train_npu_autoencoder.py --epochs 5
+```
+
+- 学習データ：KanjiVG 11,662件、重複を含まない文字6,703種
+- 検証損失：1エポック目 `0.035991`、5エポック目 `0.026206`
+- 配布形式：静的形状QDQ INT8 ONNX、115,925 bytes
+- SHA-256：`8F24114713A208753C5E088D50AC2A3D3980E71905BDF7C90F6BB76B68C2E9C3`
+- 実機：Surface Pro 11、Snapdragon X Elite、QNNExecutionProvider / Hexagon NPU
+- WPF 0.6.0 MSIXのCPUフォールバック無効推論：起動時9.250 ms、デモ筆跡1.542 ms
+
+推論時間は初回のモデル準備を含む単一計測であり、性能比較の根拠にはしません。表示する再構成差は研究上の観測値であり、書字の良否、児童の困難、能力、診断または改善を意味しません。

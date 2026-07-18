@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,6 +7,8 @@ using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Microsoft.Windows.AI.MachineLearning;
+using WriteMirror.Ai;
 using WriteMirror.Core.Analysis;
 using WriteMirror.Core.Comparison;
 using WriteMirror.Core.Feedback;
@@ -30,7 +33,8 @@ public partial class MainWindow : Window
     private readonly IAttemptComparer _attemptComparer;
     private readonly IFeedbackGenerator _feedbackGenerator = new TemplateFeedbackService();
     private readonly ISessionRepository _sessionRepository;
-    private readonly JapaneseHandwritingRecognizer? _handwritingRecognizer;
+    private JapaneseHandwritingRecognizer? _handwritingRecognizer;
+    private TrajectoryAiService? _trajectoryAiService;
 
     private CancellationTokenSource? _replayCancellation;
     private CancellationTokenSource _saveCancellation = new();
@@ -53,16 +57,6 @@ public partial class MainWindow : Window
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WriteMirror",
             "Sessions"));
-        try
-        {
-            _handwritingRecognizer = new JapaneseHandwritingRecognizer();
-        }
-        catch (Exception error)
-        {
-            RecognizeButton.Content = "手書き認識は利用不可";
-            RecognizeButton.ToolTip = error.Message;
-        }
-
         var attributes = new DrawingAttributes
         {
             Color = Colors.Black,
@@ -73,8 +67,240 @@ public partial class MainWindow : Window
         };
         WritingCanvas.DefaultDrawingAttributes = attributes;
         ApplyUsageMode();
+        Loaded += MainWindow_Loaded;
+        Closed += (_, _) => _trajectoryAiService?.Dispose();
         StartPracticeButton.Focus();
     }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= MainWindow_Loaded;
+        await PrepareWindowsMlAsync();
+    }
+
+    private async Task PrepareWindowsMlAsync()
+    {
+        string logPath = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "WriteMirror",
+            "windows-ml-readiness.log");
+        string modelPath = System.IO.Path.Combine(
+            AppContext.BaseDirectory,
+            "Models",
+            "trajectory-autoencoder-qdq-int8.onnx");
+
+        try
+        {
+            ExecutionProviderCatalog catalog = ExecutionProviderCatalog.GetDefault();
+            ExecutionProvider? qnn = catalog.FindAllProviders()
+                .FirstOrDefault(provider => provider.Name == "QNNExecutionProvider");
+            if (qnn is null)
+            {
+                _trajectoryAiService = TrajectoryAiService.CreateCpu(modelPath);
+                AiStatusText.Text = "AIモデル：CPUモード（Qualcomm NPU非搭載端末）";
+                WriteWindowsMlLog(logPath, "QNNExecutionProvider\tUnavailable");
+                WriteWindowsMlLog(logPath, "AiReady\tCPUExecutionProvider");
+                return;
+            }
+
+            WriteWindowsMlLog(logPath, $"QNNExecutionProvider\t{qnn.ReadyState}");
+            if (qnn.ReadyState != ExecutionProviderReadyState.Ready)
+            {
+                AiStatusText.Text = "AI：Qualcomm NPUコンポーネントを準備しています…";
+                var operation = qnn.EnsureReadyAsync();
+                operation.Progress = (_, progress) => Dispatcher.BeginInvoke(() =>
+                {
+                    AiStatusText.Text = $"AI：Qualcomm NPUコンポーネントを準備しています（{progress:0}%）";
+                });
+                ExecutionProviderReadyResult result = await operation;
+                string extendedError = result.ExtendedError is null
+                    ? "none"
+                    : $"0x{result.ExtendedError.HResult:X8}";
+                WriteWindowsMlLog(
+                    logPath,
+                    $"EnsureReadyAsync\t{result.Status}\t{extendedError}\t{result.DiagnosticText}");
+                if (result.Status != ExecutionProviderReadyResultState.Success)
+                {
+                    throw new InvalidOperationException(
+                        $"QNN preparation failed: {result.Status} {result.DiagnosticText}");
+                }
+            }
+
+            WriteWindowsMlLog(logPath, "Registering\tCertifiedExecutionProviders");
+            await catalog.RegisterCertifiedAsync();
+            string devices = string.Join(
+                ", ",
+                Microsoft.ML.OnnxRuntime.OrtEnv.Instance().GetEpDevices()
+                    .Select(device => $"{device.EpName}/{device.HardwareDevice.Type}"));
+            WriteWindowsMlLog(logPath, $"Registered\t{qnn.ReadyState}");
+            WriteWindowsMlLog(logPath, $"OrtDevices\t{devices}");
+            _trajectoryAiService = TrajectoryAiService.CreateNpu(modelPath);
+            TrajectoryAiResult probe = await Task.Run(() =>
+                _trajectoryAiService.Analyze(CreateModelProbeStrokes()));
+            WriteWindowsMlLog(
+                logPath,
+                $"ProbeInference\t{probe.ExecutionProvider}\t{probe.InferenceMilliseconds:0.000}ms\t" +
+                $"difference={probe.ReconstructionDifference:0.000000}");
+            AiStatusText.Text =
+                $"AIモデル：KanjiVG軌跡オートエンコーダー／Qualcomm Hexagon NPU（QNN）／" +
+                $"確認推論 {probe.InferenceMilliseconds:0.0} ms";
+            WriteWindowsMlLog(logPath, $"AiReady\t{probe.ExecutionProvider}");
+        }
+        catch (Exception error)
+        {
+            WriteWindowsMlLog(logPath, $"Error\t0x{error.HResult:X8}\t{error.GetType().Name}\t{error.Message}");
+            try
+            {
+                _trajectoryAiService = TrajectoryAiService.CreateCpu(modelPath);
+                AiStatusText.Text = "AIモデル：CPUモード（NPUは今回利用できません）";
+                WriteWindowsMlLog(logPath, "AiReady\tCPUExecutionProvider");
+            }
+            catch (Exception fallbackError)
+            {
+                WriteWindowsMlLog(
+                    logPath,
+                    $"CpuFallbackError\t0x{fallbackError.HResult:X8}\t{fallbackError.Message}");
+                AiStatusText.Text = "AIモデルを利用できません。書字記録機能は引き続き使用できます";
+            }
+        }
+    }
+
+    private async Task AnalyzeTrajectoryAsync()
+    {
+        if (_trajectoryAiService is null || _recorder.Strokes.Count == 0)
+        {
+            return;
+        }
+
+        Guid sessionId = _sessionId;
+        WriteMirror.Core.Models.Stroke[] strokes = _recorder.Strokes.ToArray();
+        try
+        {
+            TrajectoryAiResult result = await Task.Run(() =>
+                _trajectoryAiService.Analyze(strokes));
+            if (sessionId != _sessionId || _currentAttempt is null)
+            {
+                return;
+            }
+
+            AiStatusText.Text =
+                $"AIモデル：{result.ExecutionProvider}／推論 {result.InferenceMilliseconds:0.0} ms／" +
+                $"軌跡再構成差 {result.ReconstructionDifference:0.0000}（研究値・採点や診断には使用しません）";
+            DrawAiTrajectoryPreview(result);
+            string logPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WriteMirror",
+                "windows-ml-readiness.log");
+            WriteWindowsMlLog(
+                logPath,
+                $"Inference\t{result.ExecutionProvider}\t{result.InferenceMilliseconds:0.000}ms\t" +
+                $"difference={result.ReconstructionDifference:0.000000}");
+        }
+        catch (Exception error)
+        {
+            AiStatusText.Text = "AIモデル推論を完了できませんでした。書字記録機能は引き続き使用できます";
+            string logPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WriteMirror",
+                "windows-ml-readiness.log");
+            WriteWindowsMlLog(
+                logPath,
+                $"InferenceError\t0x{error.HResult:X8}\t{error.GetType().Name}\t{error.Message}");
+        }
+    }
+
+    private void DrawAiTrajectoryPreview(TrajectoryAiResult result)
+    {
+        AiPreviewCanvas.Children.Clear();
+        DrawAiTrajectoryLayer(result.OriginalPoints, Brushes.SlateGray, 5, 0.6);
+        DrawAiTrajectoryLayer(result.ReconstructedPoints, Brushes.MediumPurple, 3, 0.95);
+        AiPreviewMetricsText.Text =
+            $"実行：{result.ExecutionProvider}／{result.InferenceMilliseconds:0.0} ms。" +
+            $"再構成差 {result.ReconstructionDifference:0.0000} は研究上の観測値です。";
+        AiPreviewPanel.Visibility = Visibility.Visible;
+    }
+
+    private void DrawAiTrajectoryLayer(
+        IReadOnlyList<TrajectoryAiPoint> points,
+        Brush brush,
+        double thickness,
+        double opacity)
+    {
+        const double margin = 14;
+        double width = AiPreviewCanvas.Width - margin * 2;
+        double height = AiPreviewCanvas.Height - margin * 2;
+        var polyline = NewAiPolyline(brush, thickness, opacity);
+        foreach (TrajectoryAiPoint point in points)
+        {
+            polyline.Points.Add(new Point(
+                margin + point.X * width,
+                margin + point.Y * height));
+            if (!point.EndsStroke)
+            {
+                continue;
+            }
+
+            if (polyline.Points.Count > 1)
+            {
+                AiPreviewCanvas.Children.Add(polyline);
+            }
+
+            polyline = NewAiPolyline(brush, thickness, opacity);
+        }
+
+        if (polyline.Points.Count > 1)
+        {
+            AiPreviewCanvas.Children.Add(polyline);
+        }
+    }
+
+    private static Polyline NewAiPolyline(Brush brush, double thickness, double opacity) =>
+        new()
+        {
+            Stroke = brush,
+            StrokeThickness = thickness,
+            StrokeLineJoin = PenLineJoin.Round,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            Opacity = opacity
+        };
+
+    private static void WriteWindowsMlLog(string path, string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+            File.AppendAllText(path, $"{DateTimeOffset.Now:O}\tWPF\t{message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // ログ保存の失敗は書字機能を妨げないようにします。
+        }
+    }
+
+    private static IReadOnlyList<WriteMirror.Core.Models.Stroke> CreateModelProbeStrokes() =>
+    [
+        new WriteMirror.Core.Models.Stroke(0,
+        [
+            new PenPointSample(190, 150, 1_000_000, 0.5f, 0, 0, true),
+            new PenPointSample(480, 150, 1_420_000, 0.5f, 0, 0, true)
+        ]),
+        new WriteMirror.Core.Models.Stroke(1,
+        [
+            new PenPointSample(335, 80, 1_680_000, 0.5f, 0, 0, true),
+            new PenPointSample(335, 360, 2_160_000, 0.5f, 0, 0, true)
+        ]),
+        new WriteMirror.Core.Models.Stroke(2,
+        [
+            new PenPointSample(330, 205, 2_430_000, 0.5f, 0, 0, true),
+            new PenPointSample(215, 345, 2_820_000, 0.5f, 0, 0, true)
+        ]),
+        new WriteMirror.Core.Models.Stroke(3,
+        [
+            new PenPointSample(340, 205, 3_520_000, 0.5f, 0, 0, true),
+            new PenPointSample(475, 350, 3_900_000, 0.5f, 0, 0, true)
+        ])
+    ];
 
     private UsageMode CurrentUsageMode =>
         UsageModeSelector.SelectedIndex == 1
@@ -195,7 +421,7 @@ public partial class MainWindow : Window
             {
                 CandidateSelector.ItemsSource = null;
                 CandidateSelector.IsEnabled = false;
-                RecognizeButton.IsEnabled = _handwritingRecognizer is not null;
+                RecognizeButton.IsEnabled = true;
                 SpeakButton.IsEnabled = !string.IsNullOrWhiteSpace(RecognizedTextBox.Text);
                 MarkButton.IsEnabled = _recorder.Strokes.Count > 0;
                 SubjectiveLabelBox.IsEnabled = true;
@@ -291,7 +517,7 @@ public partial class MainWindow : Window
 
     private async Task RecognizeWritingAsync()
     {
-        if (_handwritingRecognizer is null || WritingCanvas.Strokes.Count == 0)
+        if (WritingCanvas.Strokes.Count == 0)
         {
             StatusText.Text = "認識できる筆跡がありません";
             return;
@@ -301,6 +527,7 @@ public partial class MainWindow : Window
         StatusText.Text = "Windows の平仮名・片仮名・漢字候補を取得しています…";
         try
         {
+            _handwritingRecognizer ??= new JapaneseHandwritingRecognizer();
             HandwritingRecognition result = await _handwritingRecognizer.RecognizeAsync(WritingCanvas.Strokes);
             if (string.IsNullOrWhiteSpace(result.Text))
             {
@@ -323,7 +550,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            RecognizeButton.IsEnabled = _handwritingRecognizer is not null && WritingCanvas.Strokes.Count > 0;
+            RecognizeButton.IsEnabled = WritingCanvas.Strokes.Count > 0;
         }
     }
 
@@ -432,6 +659,9 @@ public partial class MainWindow : Window
         SubjectiveMark? mark,
         SubjectiveResponseKind subjectiveResponse)
     {
+        AiPreviewPanel.Visibility = Visibility.Collapsed;
+        AiPreviewCanvas.Children.Clear();
+        AiPreviewMetricsText.Text = string.Empty;
         WritingMetrics metrics = _analyzer.Analyze(
             new WritingAttempt(_attemptNo, _recorder.Strokes));
         _currentAttempt = new WritingAttempt(
@@ -485,6 +715,10 @@ public partial class MainWindow : Window
                 : "できあがり　このまま終わることもできます";
             SaveCurrentSessionAsync();
             ShowFeedbackAsync(_currentAttempt, _subjectiveMatch, null);
+            if (showCandidatesAutomatically)
+            {
+                _ = AnalyzeTrajectoryAsync();
+            }
             StatusText.Text = relationText;
             return;
         }
@@ -504,6 +738,10 @@ public partial class MainWindow : Window
         StepText.Text = "できあがり　点数ではなく、書き方のちがいです";
         StatusText.Text = "2回の値の差を表示しました。正確さ、読みやすさ、能力は評価していません";
         ShowFeedbackAsync(_currentAttempt, null, comparison);
+        if (showCandidatesAutomatically)
+        {
+            _ = AnalyzeTrajectoryAsync();
+        }
     }
 
     private void ObserveCandidatesButton_Click(object sender, RoutedEventArgs e)
@@ -522,6 +760,7 @@ public partial class MainWindow : Window
         StatusText.Text = candidateShown
             ? "本人が選んだため、線をかえていた時間の候補を表示しました"
             : "この試行には表示条件を満たす観測候補がありませんでした";
+        _ = AnalyzeTrajectoryAsync();
     }
 
     private void FinishButton_Click(object sender, RoutedEventArgs e)
@@ -690,6 +929,9 @@ public partial class MainWindow : Window
         CompareButton.Visibility = Visibility.Collapsed;
         CompareButton.IsEnabled = false;
         ResultPanel.Visibility = Visibility.Collapsed;
+        AiPreviewPanel.Visibility = Visibility.Collapsed;
+        AiPreviewCanvas.Children.Clear();
+        AiPreviewMetricsText.Text = string.Empty;
         StepText.Text = "5 / 5　もう一度書いてみよう";
         StatusText.Text = "2回目を書いてください。書き終えたら同じ振り返り質問へ回答します";
     }
@@ -801,10 +1043,10 @@ public partial class MainWindow : Window
     {
         PenPointSample[][] strokes =
         [
-            [DemoPoint(190, 120, 1_000_000), DemoPoint(480, 120, 1_420_000)],
-            [DemoPoint(335, 55, 1_680_000), DemoPoint(335, 340, 2_160_000)],
-            [DemoPoint(330, 180, 2_430_000), DemoPoint(215, 325, 2_820_000)],
-            [DemoPoint(340, 180, 3_520_000), DemoPoint(475, 330, 3_900_000)]
+            DemoLine(190, 120, 480, 120, 1_000_000, 1_420_000),
+            DemoLine(335, 55, 335, 340, 1_680_000, 2_160_000),
+            DemoLine(330, 180, 215, 325, 2_430_000, 2_820_000),
+            DemoLine(340, 180, 475, 330, 3_520_000, 3_900_000)
         ];
 
         foreach (PenPointSample[] samples in strokes)
@@ -824,8 +1066,28 @@ public partial class MainWindow : Window
 
     private DrawingAttributes CopyDrawingAttributes() => WritingCanvas.DefaultDrawingAttributes.Clone();
 
-    private static PenPointSample DemoPoint(double x, double y, long timestampUs) =>
-        new(x, y, timestampUs, 0.5f, null, null, true);
+    private static PenPointSample[] DemoLine(
+        double startX,
+        double startY,
+        double endX,
+        double endY,
+        long startUs,
+        long endUs,
+        int pointCount = 24) =>
+        Enumerable.Range(0, pointCount)
+            .Select(index =>
+            {
+                double amount = index / (pointCount - 1d);
+                return new PenPointSample(
+                    startX + (endX - startX) * amount,
+                    startY + (endY - startY) * amount,
+                    startUs + (long)((endUs - startUs) * amount),
+                    0.5f,
+                    null,
+                    null,
+                    true);
+            })
+            .ToArray();
 
     private void ResetSessionState()
     {
@@ -868,6 +1130,9 @@ public partial class MainWindow : Window
         SpeakButton.IsEnabled = false;
         ResultPanel.Visibility = Visibility.Collapsed;
         ObservationChoicePanel.Visibility = Visibility.Collapsed;
+        AiPreviewPanel.Visibility = Visibility.Collapsed;
+        AiPreviewCanvas.Children.Clear();
+        AiPreviewMetricsText.Text = string.Empty;
         ObserveCandidatesButton.IsEnabled = true;
         InitialMetricsText.Text = string.Empty;
         ComparisonText.Text = string.Empty;

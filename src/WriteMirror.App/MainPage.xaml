@@ -131,12 +131,18 @@
             </ComboBox>
         </Grid>
 
-        <TextBlock
-            x:Name="StatusText"
-            Grid.Row="3"
-            Text="ペンで書いてください（デモではマウスも使用できます）"
-            TextWrapping="Wrap"
-            Opacity="0.75" />
+        <StackPanel Grid.Row="3" Spacing="4">
+            <TextBlock
+                x:Name="StatusText"
+                Text="ペンで書いてください（デモではマウスも使用できます）"
+                TextWrapping="Wrap"
+                Opacity="0.75" />
+            <TextBlock
+                x:Name="AiStatusText"
+                Text="AIモデルを準備しています"
+                TextWrapping="Wrap"
+                Opacity="0.75" />
+        </StackPanel>
 
         <Border
             x:Name="ComparisonPanel"

@@ -29,6 +29,8 @@ packages/
 archive/
 dist/
 release/
+artifacts/
+experiments/windows_ml_probe/publish*/
 
 # Docker
 .docker/

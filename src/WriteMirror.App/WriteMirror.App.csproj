@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
     <OutputType>WinExe</OutputType>
     <TargetPlatformMinVersion>10.0.22621.0</TargetPlatformMinVersion>
     <RootNamespace>WriteMirror.App</RootNamespace>
@@ -22,5 +22,14 @@
   <ItemGroup>
     <ProjectReference Include="..\WriteMirror.Core\WriteMirror.Core.csproj" />
     <ProjectReference Include="..\WriteMirror.Infrastructure\WriteMirror.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Models\trajectory-autoencoder-qdq-int8.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Models\trajectory-autoencoder-model-card.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
