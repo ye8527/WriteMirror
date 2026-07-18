@@ -1,0 +1,264 @@
+<Window x:Class="WriteMirror.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WriteMirror"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
+        MinWidth="960"
+        MinHeight="700"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
+        Foreground="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"
+        FontFamily="Yu Gothic UI"
+        FontSize="17">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="MinHeight" Value="52" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="FontSize" Value="17" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="FontSize" Value="17" />
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="FontSize" Value="18" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid x:Name="PracticeContent" Margin="20" IsEnabled="False">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="WriteMirror" FontSize="34" FontWeight="SemiBold"
+                               AutomationProperties.HeadingLevel="Level1" />
+                    <TextBlock Text="じぶんの書き方を、ゆっくり見てみよう"
+                               FontSize="19" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="つかい方：" VerticalAlignment="Center" />
+                    <ComboBox x:Name="UsageModeSelector" Width="280" SelectedIndex="0"
+                              SelectionChanged="UsageModeSelector_SelectionChanged"
+                              AutomationProperties.Name="つかい方">
+                        <ComboBoxItem Content="ひとりで練習（保存しない）" />
+                        <ComboBoxItem Content="いっしょに確認（任意保存）" />
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1"
+                    Background="{DynamicResource {x:Static SystemColors.InfoBrushKey}}"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                    BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock x:Name="ModeNoticeText"
+                               Text="このモードは保存しません。点数をつけません。いつでもやめられます。"
+                               FontWeight="SemiBold" TextWrapping="Wrap"
+                               AutomationProperties.LiveSetting="Polite" />
+                    <TextBlock x:Name="StatusText"
+                               Text="下の白いところに Surface Pen で書いてください"
+                               TextWrapping="Wrap" Margin="0,4,0,0"
+                               AutomationProperties.AutomationId="StatusText"
+                               AutomationProperties.LiveSetting="Polite" />
+                </StackPanel>
+            </Border>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="390" />
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0" Margin="0,0,14,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                        <Button x:Name="InstructionSpeakButton" DockPanel.Dock="Right"
+                                Content="せつめいを聞く" Click="InstructionSpeakButton_Click"
+                                AutomationProperties.Name="いまの説明を音声で聞く" />
+                        <TextBlock x:Name="StepText" Text="1 / 5　文字を書こう"
+                                   FontSize="24" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive" />
+                    </DockPanel>
+
+                    <Border Grid.Row="1"
+                            Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                            BorderBrush="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"
+                            BorderThickness="3" CornerRadius="8" MinHeight="400"
+                            AutomationProperties.Name="文字を書くところ">
+                        <Grid>
+                            <InkCanvas x:Name="WritingCanvas"
+                                       Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                                       EditingMode="Ink" EditingModeInverted="Ink"
+                                       StrokeCollected="WritingCanvas_StrokeCollected"
+                                       PreviewStylusDown="WritingCanvas_PreviewStylusDown"
+                                       PreviewMouseLeftButtonDown="WritingCanvas_PreviewMouseLeftButtonDown"
+                                       AutomationProperties.Name="Surface Penで文字を書くところ"
+                                       AutomationProperties.HelpText="文字を書き、右側の書けたボタンを押します" />
+                            <Canvas x:Name="MarkerCanvas" IsHitTestVisible="False" Background="Transparent" />
+                        </Grid>
+                    </Border>
+
+                    <WrapPanel Grid.Row="2" Margin="0,8,0,0">
+                        <Button x:Name="ClearButton" Content="やめる・いまのデータを消す"
+                                Click="ClearButton_Click"
+                                AutomationProperties.HelpText="画面上の筆跡と現在の練習データを消します" />
+                        <Button x:Name="ReplayButton" Content="もう一度見る" IsEnabled="False"
+                                Click="ReplayButton_Click" />
+                        <Button x:Name="SpeakButton" Content="結果を聞く" IsEnabled="False"
+                                Click="SpeakButton_Click" />
+                    </WrapPanel>
+                </Grid>
+
+                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Border BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                                BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="① 書く文字" FontSize="20" FontWeight="SemiBold" />
+                                <TextBox x:Name="RecognizedTextBox"
+                                         ToolTip="平仮名・片仮名・漢字を自由に入力・修正できます"
+                                         AutomationProperties.Name="書く文字または認識した文字" />
+                                <Button x:Name="RecognizeButton" Content="Windowsで文字候補を見る（任意）"
+                                        IsEnabled="False" Click="RecognizeButton_Click"
+                                        AutomationProperties.HelpText="Windowsの日本語手書き認識から候補を表示します" />
+                                <ComboBox x:Name="CandidateSelector" IsEnabled="False"
+                                          SelectionChanged="CandidateSelector_SelectionChanged"
+                                          AutomationProperties.Name="文字候補" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                                BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="② 書いたあとの気もち" FontSize="20" FontWeight="SemiBold" />
+                                <ComboBox x:Name="SubjectiveLabelBox" SelectedIndex="3" IsEnabled="False"
+                                          AutomationProperties.Name="書いたあとの気もち">
+                                    <ComboBoxItem Content="ためらった" />
+                                    <ComboBoxItem Content="書きにくかった" />
+                                    <ComboBoxItem Content="気になった" />
+                                    <ComboBoxItem Content="特になし" />
+                                    <ComboBoxItem Content="うまくいった" />
+                                    <ComboBoxItem Content="答えない" />
+                                </ComboBox>
+                                <Button x:Name="MarkButton" Content="書けた・ふり返る" IsEnabled="False"
+                                        Click="MarkButton_Click" />
+                                <Button x:Name="SecondAttemptButton" Content="もう一度書く" IsEnabled="False"
+                                        Click="SecondAttemptButton_Click" />
+                                <Button x:Name="CompareButton" Content="できあがりを見る"
+                                        Visibility="Collapsed" IsEnabled="False" Click="CompareButton_Click" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="ResultPanel" Visibility="Collapsed"
+                                BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                                BorderThickness="2" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock x:Name="ResultTitleText" Text="書き方を見てみよう"
+                                           FontWeight="SemiBold" FontSize="21" />
+                                <TextBlock Text="これは点数ではありません。上手・下手や能力を決めません。"
+                                           TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,4,0,6" />
+                                <TextBlock x:Name="FeedbackObservationText" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                <TextBlock x:Name="FeedbackReflectionText" TextWrapping="Wrap" />
+                                <TextBlock x:Name="FeedbackQuestionText" TextWrapping="Wrap" FontWeight="SemiBold" />
+                                <Grid x:Name="ObservationChoicePanel" Visibility="Collapsed" Margin="0,10,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="ObserveCandidatesButton" Grid.Column="0"
+                                            Content="観測を見てみる（任意）"
+                                            Click="ObserveCandidatesButton_Click" Margin="0,0,4,0" />
+                                    <Button x:Name="FinishButton" Grid.Column="1"
+                                            Content="これで終わる"
+                                            Click="FinishButton_Click" Margin="4,0,0,0" />
+                                </Grid>
+                                <Expander Header="くわしい数値（見たい人だけ）" IsExpanded="False" Margin="0,8,0,0"
+                                          AutomationProperties.Name="くわしい観測値">
+                                    <StackPanel Margin="8">
+                                        <TextBlock x:Name="InitialMetricsText" TextWrapping="Wrap" />
+                                        <TextBlock x:Name="ComparisonText" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        <TextBlock x:Name="FeedbackGeneratorText" TextWrapping="Wrap" FontSize="13" Margin="0,6,0,0" />
+                                        <TextBlock Text="数値の差は、困難・改善・効果を意味しません。"
+                                                   TextWrapping="Wrap" FontSize="13" />
+                                    </StackPanel>
+                                </Expander>
+                            </StackPanel>
+                        </Border>
+
+                        <Border BorderBrush="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}"
+                                BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="使う手" FontWeight="SemiBold" />
+                                <ComboBox x:Name="HandednessSelector" SelectedIndex="0"
+                                          AutomationProperties.Name="使う手">
+                                    <ComboBoxItem Content="右手" />
+                                    <ComboBoxItem Content="左手" />
+                                </ComboBox>
+                                <TextBlock Text="左右どちらでも選べます。これは入力条件の記録で、能力の評価には使いません。"
+                                           TextWrapping="Wrap" FontSize="13" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Expander Header="確認・デモ設定" IsExpanded="False">
+                            <StackPanel Margin="8">
+                                <Button x:Name="DemoButton" Content="デモデータを使う" Click="DemoButton_Click" />
+                                <StackPanel x:Name="GuidedSavePanel" Visibility="Collapsed">
+                                    <CheckBox x:Name="SaveConsentCheckBox"
+                                              Content="このセッションだけ端末に保存する"
+                                              IsChecked="False" Checked="SaveConsentCheckBox_Checked"
+                                              Unchecked="SaveConsentCheckBox_Unchecked"
+                                              Margin="8" Padding="4"
+                                              AutomationProperties.HelpText="いっしょに確認モードだけで有効です。初期値はオフです" />
+                                    <Button x:Name="DeleteAllButton" Content="保存したデータを全部消す"
+                                            Click="DeleteAllButton_Click" />
+                                    <TextBlock Text="保存先：%LOCALAPPDATA%\WriteMirror\Sessions。目的・保持期間を決めた確認時だけ使います。"
+                                               TextWrapping="Wrap" FontSize="13" Margin="8,4" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <Border x:Name="AssentPanel" Panel.ZIndex="100" Width="680" MaxWidth="760"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"
+                BorderThickness="3" CornerRadius="12" Padding="32">
+            <StackPanel>
+                <TextBlock Text="WriteMirrorをつかいますか？" FontSize="30" FontWeight="SemiBold"
+                           TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level1" />
+                <TextBlock Text="文字を書いて、自分の書き方を見ます。点数はつけません。ひとりで練習するときは保存しません。いつでもやめられます。"
+                           FontSize="21" TextWrapping="Wrap" Margin="0,18,0,18" />
+                <TextBlock Text="いやなとき、つかいたくないときは「いまはやめる」をえらんでください。"
+                           TextWrapping="Wrap" Margin="0,0,0,14" />
+                <WrapPanel HorizontalAlignment="Center">
+                    <Button x:Name="StartPracticeButton" Content="つかう" MinWidth="180"
+                            Click="StartPracticeButton_Click" IsDefault="True" />
+                    <Button x:Name="DeclinePracticeButton" Content="いまはやめる" MinWidth="180"
+                            Click="DeclinePracticeButton_Click" IsCancel="True" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

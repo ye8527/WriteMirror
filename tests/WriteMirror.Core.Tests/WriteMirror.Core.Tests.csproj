@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Platforms>ARM64;x64</Platforms>
+    <RootNamespace>WriteMirror.Core.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" Version="3.6.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WriteMirror.Core\WriteMirror.Core.csproj" />
+    <Compile Include="..\..\src\WriteMirror.Infrastructure\Storage\JsonSessionRepository.cs"
+             Link="Storage\JsonSessionRepository.cs" />
+  </ItemGroup>
+</Project>

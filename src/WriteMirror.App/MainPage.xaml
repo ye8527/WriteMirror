@@ -1,0 +1,186 @@
+<Page
+    x:Class="WriteMirror.App.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WriteMirror.App"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <Style TargetType="Button">
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="MinWidth" Value="72" />
+            <Setter Property="Padding" Value="12,6" />
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="44" />
+        </Style>
+    </Page.Resources>
+
+    <Grid RowSpacing="12" Padding="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Title -->
+        <TextBlock
+            Grid.Row="0"
+            Text="WriteMirror"
+            Style="{ThemeResource TitleLargeTextBlockStyle}" />
+
+        <!-- Subtitle -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock
+                Text="Surface Pen による書字プロセスの振り返り支援"
+                Style="{ThemeResource SubtitleTextBlockStyle}"
+                Opacity="0.7" />
+            <TextBlock
+                Grid.Column="1"
+                Text="筆跡データはこの端末内で処理されます · 診断目的ではありません"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Opacity="0.7" />
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button
+                x:Name="ClearButton"
+                Content="セッション削除"
+                Click="ClearButton_Click" />
+            <Button
+                x:Name="ReplayButton"
+                Grid.Column="1"
+                Content="再生"
+                IsEnabled="False"
+                Click="ReplayButton_Click" />
+            <Button
+                x:Name="MarkButton"
+                Grid.Column="2"
+                Content="書字完了・位置選択"
+                IsEnabled="False"
+                Click="MarkButton_Click" />
+            <ComboBox
+                x:Name="SubjectiveLabelBox"
+                Grid.Column="3"
+                Width="132"
+                SelectedIndex="0"
+                IsEnabled="False"
+                AutomationProperties.Name="主観ラベル">
+                <ComboBoxItem Content="ためらい" />
+                <ComboBoxItem Content="書きにくい" />
+                <ComboBoxItem Content="納得できない" />
+            </ComboBox>
+            <Button
+                x:Name="SecondAttemptButton"
+                Grid.Column="4"
+                Content="もう一度書く"
+                IsEnabled="False"
+                Click="SecondAttemptButton_Click" />
+            <Button
+                x:Name="CompareButton"
+                Grid.Column="4"
+                Content="完了・比較"
+                Visibility="Collapsed"
+                IsEnabled="False"
+                Click="CompareButton_Click" />
+            <ComboBox
+                x:Name="TaskSelector"
+                Grid.Column="5"
+                Width="88"
+                SelectedIndex="1"
+                AutomationProperties.Name="書字タスク">
+                <ComboBoxItem Content="あ" />
+                <ComboBoxItem Content="木" />
+                <ComboBoxItem Content="語" />
+            </ComboBox>
+            <Button
+                x:Name="DemoButton"
+                Grid.Column="7"
+                Content="デモデータ"
+                Click="DemoButton_Click" />
+            <ComboBox
+                x:Name="HandednessSelector"
+                Grid.Column="6"
+                Width="104"
+                SelectedIndex="0"
+                AutomationProperties.Name="利き手">
+                <ComboBoxItem Content="右手" />
+                <ComboBoxItem Content="左手" />
+            </ComboBox>
+        </Grid>
+
+        <TextBlock
+            x:Name="StatusText"
+            Grid.Row="3"
+            Text="ペンで書いてください（デモではマウスも使用できます）"
+            TextWrapping="Wrap"
+            Opacity="0.75" />
+
+        <Border
+            x:Name="ComparisonPanel"
+            Grid.Row="4"
+            Visibility="Collapsed"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12">
+            <StackPanel Spacing="4">
+                <TextBlock x:Name="ResultTitleText" Text="端末内フィードバック" FontWeight="SemiBold" />
+                <TextBlock x:Name="InitialMetricsText" TextWrapping="Wrap" />
+                <TextBlock x:Name="DurationComparisonText" Visibility="Collapsed" />
+                <TextBlock x:Name="PauseComparisonText" Visibility="Collapsed" />
+                <TextBlock x:Name="PressureComparisonText" Visibility="Collapsed" />
+                <TextBlock x:Name="StructureComparisonText" Visibility="Collapsed" />
+                <TextBlock x:Name="FeedbackObservationText" Margin="0,6,0,0" TextWrapping="Wrap" />
+                <TextBlock x:Name="FeedbackReflectionText" TextWrapping="Wrap" />
+                <TextBlock x:Name="FeedbackQuestionText" TextWrapping="Wrap" FontWeight="SemiBold" />
+                <TextBlock x:Name="FeedbackGeneratorText" Opacity="0.65" FontSize="12" />
+            </StackPanel>
+        </Border>
+
+        <Border
+            Grid.Row="5"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="2"
+            CornerRadius="8"
+            Width="720"
+            MinHeight="300"
+            MaxHeight="480"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Stretch"
+            AutomationProperties.Name="書字エリア">
+            <Canvas
+                x:Name="DrawingCanvas"
+                Background="#FFFFFCF7"
+                ManipulationMode="None"
+                PointerPressed="DrawingCanvas_PointerPressed"
+                PointerMoved="DrawingCanvas_PointerMoved"
+                PointerReleased="DrawingCanvas_PointerReleased"
+                PointerCanceled="DrawingCanvas_PointerCanceled"
+                PointerCaptureLost="DrawingCanvas_PointerCaptureLost" />
+        </Border>
+    </Grid>
+</Page>
