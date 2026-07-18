@@ -1,0 +1,48 @@
+# Build results
+bin/
+obj/
+AppPackages/
+
+# User-specific
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+packages/
+*.nupkg
+*.nuget.props
+*.nuget.targets
+
+# IDE
+.vs/
+.vscode/
+*.cache
+.venv*/
+.cache/translation-models/
+.agents/
+.dotnet-home/
+.nuget-packages/
+
+# Local archives and distributable build outputs
+archive/
+dist/
+release/
+
+# Docker
+.docker/
+
+# OS
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+
+# Asset placeholders (regenerated, not source of truth)
+src/WriteMirror.App/Assets/create_placeholders.py
+
+# Downloaded/generated trajectory experiment data and model artifacts
+experiments/japanese_trajectory/data/raw/
+experiments/japanese_trajectory/data/processed/
+experiments/japanese_trajectory/artifacts/
