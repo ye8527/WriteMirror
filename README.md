@@ -23,7 +23,7 @@ AI値は、位置を伴う本人回答が確定した後、または「特にな
 
 ## デモ動画
 
-GitHub Releasesの `WriteMirror_デモ動画_ja_0.6.0.mp4` は、0.6.0.4 ARM64 MSIXをSurface Pro 11で実際に操作した55秒の日本語字幕付き動画です。本人同意、保存しない独立練習、Windows日本語手書き認識、読み上げ、中立回答の尊重、明示選択後のHexagon NPU軌跡再構成を確認できます。
+GitHub Releasesの `WriteMirror_Demo_ja_0.6.0.mp4` は、0.6.0.4 ARM64 MSIXをSurface Pro 11で実際に操作した55秒の日本語字幕付き動画です。本人同意、保存しない独立練習、Windows日本語手書き認識、読み上げ、中立回答の尊重、明示選択後のHexagon NPU軌跡再構成を確認できます。
 
 | 端末 | 対応状況 |
 |---|---|
