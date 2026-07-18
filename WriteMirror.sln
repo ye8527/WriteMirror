@@ -1,0 +1,54 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WriteMirror.App", "src\WriteMirror.App\WriteMirror.App.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WriteMirror.Core", "src\WriteMirror.Core\WriteMirror.Core.csproj", "{B2C3D4E5-F678-90AB-CDEF-123456789012}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WriteMirror.Core.Tests", "tests\WriteMirror.Core.Tests\WriteMirror.Core.Tests.csproj", "{C3D4E5F6-7890-ABCD-EF12-345678901234}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WriteMirror.Infrastructure", "src\WriteMirror.Infrastructure\WriteMirror.Infrastructure.csproj", "{D4E5F678-90AB-CDEF-1234-567890123456}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM64 = Debug|ARM64
+		Debug|x64 = Debug|x64
+		Release|ARM64 = Release|ARM64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|ARM64.Build.0 = Debug|ARM64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|ARM64.ActiveCfg = Release|ARM64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|ARM64.Build.0 = Release|ARM64
+		{B2C3D4E5-F678-90AB-CDEF-123456789012}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{B2C3D4E5-F678-90AB-CDEF-123456789012}.Debug|ARM64.Build.0 = Debug|ARM64
+		{B2C3D4E5-F678-90AB-CDEF-123456789012}.Release|ARM64.ActiveCfg = Release|ARM64
+		{B2C3D4E5-F678-90AB-CDEF-123456789012}.Release|ARM64.Build.0 = Release|ARM64
+		{C3D4E5F6-7890-ABCD-EF12-345678901234}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{C3D4E5F6-7890-ABCD-EF12-345678901234}.Debug|ARM64.Build.0 = Debug|ARM64
+		{C3D4E5F6-7890-ABCD-EF12-345678901234}.Release|ARM64.ActiveCfg = Release|ARM64
+		{C3D4E5F6-7890-ABCD-EF12-345678901234}.Release|ARM64.Build.0 = Release|ARM64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.ActiveCfg = Debug|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.Build.0 = Debug|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|x64.ActiveCfg = Release|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|x64.Build.0 = Release|x64
+		{B2C3D4E5-F678-90AB-CDEF-123456789012}.Debug|x64.ActiveCfg = Debug|x64
+		{B2C3D4E5-F678-90AB-CDEF-123456789012}.Debug|x64.Build.0 = Debug|x64
+		{B2C3D4E5-F678-90AB-CDEF-123456789012}.Release|x64.ActiveCfg = Release|x64
+		{B2C3D4E5-F678-90AB-CDEF-123456789012}.Release|x64.Build.0 = Release|x64
+		{C3D4E5F6-7890-ABCD-EF12-345678901234}.Debug|x64.ActiveCfg = Debug|x64
+		{C3D4E5F6-7890-ABCD-EF12-345678901234}.Debug|x64.Build.0 = Debug|x64
+		{C3D4E5F6-7890-ABCD-EF12-345678901234}.Release|x64.ActiveCfg = Release|x64
+		{C3D4E5F6-7890-ABCD-EF12-345678901234}.Release|x64.Build.0 = Release|x64
+		{D4E5F678-90AB-CDEF-1234-567890123456}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{D4E5F678-90AB-CDEF-1234-567890123456}.Debug|ARM64.Build.0 = Debug|ARM64
+		{D4E5F678-90AB-CDEF-1234-567890123456}.Release|ARM64.ActiveCfg = Release|ARM64
+		{D4E5F678-90AB-CDEF-1234-567890123456}.Release|ARM64.Build.0 = Release|ARM64
+		{D4E5F678-90AB-CDEF-1234-567890123456}.Debug|x64.ActiveCfg = Debug|x64
+		{D4E5F678-90AB-CDEF-1234-567890123456}.Debug|x64.Build.0 = Debug|x64
+		{D4E5F678-90AB-CDEF-1234-567890123456}.Release|x64.ActiveCfg = Release|x64
+		{D4E5F678-90AB-CDEF-1234-567890123456}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+EndGlobal
