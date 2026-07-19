@@ -1,5 +1,13 @@
 # WriteMirror
 
+[License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Contributing](CONTRIBUTING.md)
+
+## English summary
+
+WriteMirror is a privacy-first, on-device Japanese handwriting reflection research prototype for Windows 11 and Surface Pen. It combines WPF and Windows Ink with Windows ML, a quantized ONNX trajectory autoencoder, and Qualcomm QNN/Hexagon NPU inference. The software is deliberately non-diagnostic and consent-first: it does not score handwriting ability, infer disability or emotion, use cloud inference or analytics, require user accounts, or save handwriting by default.
+
+Unless a file says otherwise, original source code, tests, scripts, and documentation authored for WriteMirror are licensed under Apache-2.0. KanjiVG-derived model and data artifacts remain under CC BY-SA 3.0. See [Third-Party Notices and License Scope](THIRD_PARTY_NOTICES.md).
+
 WriteMirror は、Surface Pen の筆跡を本人が振り返るための日本語研究試作です。大学等の小グループ課題として、書字につまずきのある可能性を含む児童・小学校低学年を想定して設計しています。ただし、児童を研究参加者とする実験、診断、治療、学校・家庭への導入は本課題の範囲外です。期待される教育的効果は研究仮説であり、実証済みの効果ではありません。
 
 ## AI実装の現在地（0.6.0）
@@ -147,3 +155,10 @@ x64版は同じソースからビルドしました。ただし、現在のARM64
 ## 免責事項
 
 表示値は観測候補であり、困難、原因、正確さ、読みやすさ、能力、良否を示しません。WriteMirror は専門家の判断を代替しません。
+
+
+## ライセンスとコントリビューション
+
+- Feng YE が作成したコード、テスト、スクリプト、文書は、個別の表示がある場合を除き [Apache License 2.0](LICENSE) です。
+- KanjiVG由来のONNXモデル、モデルカード、派生データは CC BY-SA 3.0 です。適用範囲、帰属、第三者依存関係は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
+- バグ修正、テスト、アクセシビリティ、文書改善への参加方法は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。児童の筆跡、個人情報、機密研究データを Issue、PR、テスト、外部AIサービスへ含めないでください。
