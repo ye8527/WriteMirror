@@ -27,7 +27,7 @@ WriteMirror uses KanjiVG as public stroke-order reference data.
 
 - Upstream project: <https://github.com/KanjiVG/kanjivg>
 - Project website: <https://kanjivg.tagaini.net/>
-- Copyright: © 2009-2026 Ulrich Apel
+- Copyright: Ulrich Apel
 - Upstream license: Creative Commons Attribution-ShareAlike 3.0 Unported
   (`CC BY-SA 3.0`)
 - License text: <https://creativecommons.org/licenses/by-sa/3.0/legalcode>
