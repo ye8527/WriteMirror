@@ -159,6 +159,6 @@ x64版は同じソースからビルドしました。ただし、現在のARM64
 
 ## ライセンスとコントリビューション
 
-- Feng YE が作成したコード、テスト、スクリプト、文書は、個別の表示がある場合を除き [Apache License 2.0](LICENSE) です。
+- 文書は、個別の表示がある場合を除き [Apache License 2.0](LICENSE) です。
 - KanjiVG由来のONNXモデル、モデルカード、派生データは CC BY-SA 3.0 です。適用範囲、帰属、第三者依存関係は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
 - バグ修正、テスト、アクセシビリティ、文書改善への参加方法は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。児童の筆跡、個人情報、機密研究データを Issue、PR、テスト、外部AIサービスへ含めないでください。
